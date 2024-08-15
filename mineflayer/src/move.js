@@ -8,13 +8,15 @@ const { Vec3 } = require('vec3')
 
 const bot = mineflayer.createBot({
   host: "localhost",
-  port: "3000",
+  port: "9999",
   username: 'gps1',
 })
 
 const RANGE_GOAL = 1 // get within this radius of the player
 
 bot.loadPlugin(pathfinder)
+
+
 
 
 
@@ -30,6 +32,20 @@ function findSweetSpot () {
   findAndMinePumpkins()
 }
 
+async function look_pumpkin (){
+  await bot.look(-1.5708, 0.59, true)
+  await bot.setControlState('forward', true)
+  await bot.waitForTicks(60)
+}
+
+async function dig_at_cursor(){
+  for (var i = 0; i < 3; i++){
+    block = bot.blockAtCursor(4)
+    if (block){
+      await bot.dig(block, 'ignore', 'raycast')
+    }
+  }
+}
 
 function againstWall(){
   var prev_loc = 0;
@@ -40,28 +56,23 @@ function againstWall(){
   bot.clearControlStates()
 }
 
-function findRedCarpet(){
-  const pumpkin = bot.findBlocks({
-    matching: bot.registry.blocksByName.pumpkin.id,
+
+function findSignsAndText(){
+  const sign = bot.findBlocks({
+    matching: bot.registry.blocksByName.sign.id,
     maxDistance: 32,
     count: 100
   });
 
+}
+
+function findRedCarpet(){
 
   const red_carpet = bot.findBlocks({
     matching: bot.registry.blocksByName.red_carpet.id,
     maxDistance: 32,
     count: 100
   });
-
-
-  const blue_carpet = bot.findBlocks({
-    matching: bot.registry.blocksByName.blue_carpet.id,
-    maxDistance: 32,
-    count: 100
-  });
-
-
 
 
   if (red_carpet.length == 0){
@@ -75,18 +86,10 @@ function findRedCarpet(){
 
   bot.once('goal_reached', async () => {
     bot.chat("reached the carpet. Looking for best angle...")
-    await bot.lookAt(pumpkin[0], false)
 
-    againstWall()
+    await look_pumpkin()
+    await dig_at_cursor()
 
-    bot.chat("against wall!")
-    const bluecarpet = blue_carpet[0];
-
-    await bot.lookAt(bluecarpet).then(
-      if (bot.blockAtCursor() != undefined){
-        bot.dig(block, "ignore")
-      }
-    )
   })
 }
 
@@ -146,8 +149,6 @@ function findAndMinePumpkins() {
     return;
   }
 
-  // Find the nearest pumpkin
-  const nearestPumpkin = pumpkins[0];
 }
 
 
@@ -159,6 +160,7 @@ bot.on('chat', async (username, message) => {
     await bot.waitForChunksToLoad()
     bot.chat('Ready!')
   }
+
 
   if (message.startsWith('find')) {
     const name = message.split(' ')[1]
@@ -179,8 +181,14 @@ bot.on('chat', async (username, message) => {
 
 
 bot.on('chat', async (username, message) => {
+
+  if (message == 'dig'){
+    //dig 3
+    await dig_at_cursor()
+  }
+
   if (message == 'walk'){
-    await bot.look(85, 0, true)
+    await bot.look(-1.5708, 0.72, true)
     await bot.setControlState('forward', true)
   }
 
@@ -191,7 +199,7 @@ bot.on('chat', async (username, message) => {
 
 
 bot.once('spawn', () => {
-  mineflayerViewer(bot, { port: 3007, firstPerson: true })
+  mineflayerViewer(bot, { port: 3007, firstPerson: false })
   const defaultMove = new Movements(bot)
   bot.on('chat', (username, message) => {
 
@@ -223,6 +231,7 @@ bot.once('spawn', () => {
 
 
   })
-
-
 })
+
+bot.on('kicked', console.log)
+bot.on('error', console.log)
